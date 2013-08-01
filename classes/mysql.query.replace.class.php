@@ -55,124 +55,6 @@ class mysqlClass_Replace extends mysqlClass_Abstract implements mysqlClass_Queri
 		return $this;
 	}
 
-	/**
-	 * build mysql insert query string
-	 * @param integer $formatOffset
-	 * @return string
-	 */
-	public function build($formatOffset = 0)
-	{
-		$this->formatOffset += $formatOffset;
-		$offset = str_pad("", $this->formatOffset, " ");
-		
-		// end if no table is set
-		if( is_null($this->query["table"]) ) return NULL;
-
-		$query = $this->format ? $offset . "REPLACE " : "REPLACE ";
-
-		// low priority
-		if( $this->query["low"] ) $query .= $this->format ? "\n" . $offset . "    LOW_PRIORITY " : "LOW_PRIORITY ";
-
-		// delayed
-		if( $this->query["delayed"] ) $query .= $this->format ? "\n" . $offset . "    DELAYED " : "DELAYED ";
-
-		// ignore
-		if( $this->query["ignore"] ) $query .= $this->format ? "\n" . $offset . "    IGNORE \n" : "IGNORE ";
-
-		$query .= $this->format ? $offset . "INTO " : "INTO ";
-
-		// table
-		$query .= $this->format ? "\n" . $offset . "    " . $this->query["table"] . "\n" : $this->query["table"] . " ";
-
-		// columns
-		if( !empty($this->query["columns"]) )
-		{
-			if( $this->format )
-			{
-				$query .= $offset . "    (";
-				
-				for( $i = 0; $i < count($this->query["columns"]); $i++ )
-				{
-					$query .= " " . $this->query["columns"][$i];
-					$query .= $i < count($this->query["columns"]) - 1 ? "," : NULL;
-				}
-				
-				$query .= " ) \n";
-			}
-			else
-				$query .= "(" . join(",", $this->query["columns"]) . ") ";
-			
-			if( !empty($this->query["values"]) )
-			{
-				$query .= $this->format ? "VALUES\n" : "VALUES ";
-
-				for( $i = 0; $i < count($this->query["values"]); $i++ )
-				{
-					if( $this->format )
-					{
-						$query .= $offset . "    " . "( " . join(", ", $this->query["values"][$i]) . " )";
-						$query .= $i < count($this->query["values"]) - 1 ? ",\n" : NULL;
-					}
-					else
-					{
-						$query .= "(" . join(",", $this->query["values"][$i]) . ")";
-						$query .= $i < count($this->query["values"]) - 1 ? "," : NULL;
-					}
-				}
-
-				$query .= $this->format ? "\n" : " ";
-			}
-		}
-
-		// set
-		else if( !empty($this->query["set"]) )
-		{
-			$query .= $this->format ? "SET\n" : "SET ";
-
-			for( $i = 0; $i < count($this->query["set"]); $i++ )
-			{
-				if( $this->format )
-				{
-					$query .= $offset . "    " . $this->query["set"][$i] . "";
-					$query .= $i < count($this->query["set"]) - 1 ? ", \n" : NULL;
-				}
-				else
-				{
-					$query .= "(" . join(",", $this->query["set"]) . ")";
-					$query .= $i < count($this->query["values"]) - 1 ? "," : NULL;
-				}
-			}
-
-			$query .= $this->format ? "\n" : " ";
-		}
-
-		// select		
-		if( !is_null($this->query["select"]) )
-		{
-			if( is_string($this->query["select"]) )
-			{
-				if( $this->format )
-					$query .= $offset . "    ( " . $this->query["select"] . " ) \n";
-				else
-					$query .= "(" . $this->query["select"] . ") ";
-			}
-			else
-			{
-				$select = $this->query["select"];
-
-				if( $select instanceof mysqlClass_Select )
-				{
-					if( $this->format )
-						$query .= $offset . "    (" . trim($select->build($this->formatOffset + 4)) . ") \n";
-					else
-						$query .= "(" . $select->build() . ") ";
-				}
-			}
-		}
-
-		return $query;
-	}
-
 
 
 	/*
@@ -461,5 +343,131 @@ class mysqlClass_Replace extends mysqlClass_Abstract implements mysqlClass_Queri
 		}
 
 		return $this;
+	}
+
+
+
+	/*
+	** build
+	*/
+
+
+
+	/**
+	 * build mysql insert query string
+	 * @param integer $formatOffset
+	 * @return string
+	 */
+	public function build($formatOffset = 0)
+	{
+		$this->formatOffset += $formatOffset;
+		$offset = str_pad("", $this->formatOffset, " ");
+
+		// end if no table is set
+		if( is_null($this->query["table"]) ) return NULL;
+
+		$query = $this->format ? $offset . "REPLACE " : "REPLACE ";
+
+		// low priority
+		if( $this->query["low"] ) $query .= $this->format ? "\n" . $offset . "    LOW_PRIORITY " : "LOW_PRIORITY ";
+
+		// delayed
+		if( $this->query["delayed"] ) $query .= $this->format ? "\n" . $offset . "    DELAYED " : "DELAYED ";
+
+		// ignore
+		if( $this->query["ignore"] ) $query .= $this->format ? "\n" . $offset . "    IGNORE \n" : "IGNORE ";
+
+		$query .= $this->format ? $offset . "INTO " : "INTO ";
+
+		// table
+		$query .= $this->format ? "\n" . $offset . "    " . $this->query["table"] . "\n" : $this->query["table"] . " ";
+
+		// columns
+		if( !empty($this->query["columns"]) )
+		{
+			if( $this->format )
+			{
+				$query .= $offset . "    (";
+
+				for( $i = 0; $i < count($this->query["columns"]); $i++ )
+				{
+					$query .= " " . $this->query["columns"][$i];
+					$query .= $i < count($this->query["columns"]) - 1 ? "," : NULL;
+				}
+
+				$query .= " ) \n";
+			}
+			else
+				$query .= "(" . join(",", $this->query["columns"]) . ") ";
+
+			if( !empty($this->query["values"]) )
+			{
+				$query .= $this->format ? "VALUES\n" : "VALUES ";
+
+				for( $i = 0; $i < count($this->query["values"]); $i++ )
+				{
+					if( $this->format )
+					{
+						$query .= $offset . "    " . "( " . join(", ", $this->query["values"][$i]) . " )";
+						$query .= $i < count($this->query["values"]) - 1 ? ",\n" : NULL;
+					}
+					else
+					{
+						$query .= "(" . join(",", $this->query["values"][$i]) . ")";
+						$query .= $i < count($this->query["values"]) - 1 ? "," : NULL;
+					}
+				}
+
+				$query .= $this->format ? "\n" : " ";
+			}
+		}
+
+		// set
+		else if( !empty($this->query["set"]) )
+		{
+			$query .= $this->format ? "SET\n" : "SET ";
+
+			for( $i = 0; $i < count($this->query["set"]); $i++ )
+			{
+				if( $this->format )
+				{
+					$query .= $offset . "    " . $this->query["set"][$i] . "";
+					$query .= $i < count($this->query["set"]) - 1 ? ", \n" : NULL;
+				}
+				else
+				{
+					$query .= "(" . join(",", $this->query["set"]) . ")";
+					$query .= $i < count($this->query["values"]) - 1 ? "," : NULL;
+				}
+			}
+
+			$query .= $this->format ? "\n" : " ";
+		}
+
+		// select		
+		if( !is_null($this->query["select"]) )
+		{
+			if( is_string($this->query["select"]) )
+			{
+				if( $this->format )
+					$query .= $offset . "    ( " . $this->query["select"] . " ) \n";
+				else
+					$query .= "(" . $this->query["select"] . ") ";
+			}
+			else
+			{
+				$select = $this->query["select"];
+
+				if( $select instanceof mysqlClass_Select )
+				{
+					if( $this->format )
+						$query .= $offset . "    (" . trim($select->build($this->formatOffset + 4)) . ") \n";
+					else
+						$query .= "(" . $select->build() . ") ";
+				}
+			}
+		}
+
+		return $query;
 	}
 }

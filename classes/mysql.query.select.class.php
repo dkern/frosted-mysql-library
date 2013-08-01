@@ -45,375 +45,6 @@ class mysqlClass_Select extends mysqlClass_Abstract implements mysqlClass_Querie
 		
 		return $this;
 	}
-	
-	/**
-	 * build mysql select query string
-	 * @param integer $formatOffset
-	 * @return string
-	 */
-	public function build($formatOffset = 0)
-	{
-		$this->formatOffset += $formatOffset;
-		$offset = str_pad("", $this->formatOffset, " ");
-		
-		// end if no table is set
-		if( empty($this->query["from"]) ) return NULL;
-		
-		$query = $this->format ? $offset . "SELECT " : "SELECT ";
-		
-		// all
-		if( $this->query["all"] ) $query .= $this->format ? "\n" . $offset . "    ALL " : "ALL ";
-		
-		// distinct
-		if( $this->query["distinct"] ) $query .= $this->format ? "\n" . $offset . "    DISTINCT " : "DISTINCT ";
-		
-		// distinct row
-		if( $this->query["row"] ) $query .= $this->format ? "\n" . $offset . "    DISTINCTROW " : "DISTINCTROW ";
-		
-		// high priority
-		if( $this->query["high"] ) $query .= $this->format ? "\n" . $offset . "    HIGH_PRIORITY " : "HIGH_PRIORITY ";
-		
-		// straight
-		if( $this->query["straight"] ) $query .= $this->format ? "\n" . $offset . "    STRAIGHT_JOIN " : "STRAIGHT_JOIN ";
-		
-		$query .= $this->format ? $offset . "\n" : NULL;
-		
-		// columns
-		if( !empty($this->query["columns"]) )
-		{
-			if( $this->format )
-			{
-				for( $i = 0; $i < count($this->query["columns"]); $i++ )
-				{
-					$value = $this->query["columns"][$i];
-					
-					if( is_array($value) )
-					{
-						if( $value[0] instanceof mysqlClass_Select )
-						{
-							$value[0] = $value[0]->build($this->formatOffset + 4);
-							$value[0] = trim($value[0]);
-						}
-
-						$this->query["columns"][$i] = "(" . $value[0] . ") AS " . $value[1];
-					}
-					else if( $value instanceof mysqlClass_Select )
-					{
-						$this->query["columns"][$i]  = "(" . $value->build($this->formatOffset + 4) . ")";
-					}
-					
-					$query .= $offset . "    " . $this->query["columns"][$i];
-					$query .= $i < count($this->query["columns"]) - 1 ? "," : NULL;
-					$query .= " \n";
-				}
-			}
-			else
-			{
-				for( $i = 0; $i < count($this->query["columns"]); $i++ )
-				{
-					if( is_array($this->query["columns"][$i]) )
-					{
-						$select = $this->query["columns"][$i][0];
-						
-						if( $select instanceof mysqlClass_Select )
-							$select = $select->build();
-						
-						$this->query["columns"][$i]  = "(" . $select . ") AS " . $this->query["columns"][$i][1];
-					}
-					else if( $this->query["columns"][$i] instanceof mysqlClass_Select )
-					{
-						$select = $this->query["columns"][$i];
-
-						if( $select instanceof mysqlClass_Select )
-							$select = $select->build();
-
-						$this->query["columns"][$i]  = "(" . $select . ")";
-					}
-				}
-				
-				$query .= join(",", $this->query["columns"]) . " ";
-			}
-		}
-		else
-		{
-			$query .= $this->format ? $offset . "    *\n" : "* ";
-		}
-
-		// from
-		if( !empty($this->query["from"]) )
-		{
-			if( $this->format )
-			{
-				$query .= $offset . "FROM \n";
-				
-				for( $i = 0; $i < count($this->query["from"]); $i++ )
-				{
-					$query .= $offset . "    " . $this->query["from"][$i];
-					$query .= $i < count($this->query["from"]) - 1 ? "," : NULL;
-					$query .= " \n";
-				}
-			}
-			else
-			{
-				$query .= "FROM " . join(",", $this->query["from"]) . " ";
-			}
-		}
-		
-		// join
-		if( !empty($this->query["join"]) )
-		{
-			foreach( $this->query["join"] as $join )
-			{
-				$query .= $this->format ? $offset . $join["type"] . "\n" : $join["type"] . " ";
-				
-				if( $this->format )
-				{
-					for( $i = 0; $i < count($join["tables"]); $i++ )
-					{
-						$query .= $offset . "    " . $join["tables"][$i];
-						$query .= $i < count($join["tables"]) - 1 ? "," : NULL;
-						$query .= " \n";
-					}
-					
-					if( !empty($join["on"]) )
-					{
-						$query .= $offset . "ON\n";
-						
-						for( $i = 0; $i < count($join["on"]); $i = $i + 2 )
-						{
-							$query .= $offset . "    " . $join["on"][$i];
-							$query .= $i < count($join["on"]) - 2 ? " \n" . $offset . $join["on"][$i + 1] . " " : NULL;
-							$query .= " \n";
-						}
-					}
-					else if( !empty($join["using"]) )
-					{
-						$query .= $offset . "USING\n";
-						$query .= $offset . "(\n";
-						
-						for( $i = 0; $i < count($join["using"]); $i++ )
-						{
-							$query .= $offset . "    " . $join["using"][$i];
-							$query .= $i < count($join["using"]) - 1 ? "," : NULL;
-							$query .= " \n";
-						}
-						
-						$query .= $offset . ")\n";
-					}
-				}
-				else
-				{
-					// tables
-					$query .= join(",", $join["tables"]) . " ";
-
-					// on
-					if( !empty($join["on"]) )
-					{
-						$on  = array_slice($join["on"], 0, -1);
-						$query .= "ON " . join(" ", $on) . " ";
-					}
-					
-					// using
-					else
-						$query .= "USING (" . join(",", $join["using"]) . ") ";
-				}
-			}
-		}
-		
-		// where
-		if( !empty($this->query["where"]) )
-		{
-			if( $this->format )
-			{
-				$query .= $offset . "WHERE \n";
-
-				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
-				{
-					if( is_array($this->query["where"][$i]) )
-					{
-						$select = $this->query["where"][$i][1];
-
-						if( $select instanceof mysqlClass_Select )
-						{
-							$select = $select->build($this->formatOffset + 4);
-							$select = trim($select);
-						}
-						
-						$query .= $offset . "    " . str_replace("?", "\n" . $offset . "    (" . $select . ")", $this->query["where"][$i][0]);
-						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
-						$query .= " \n";
-					}
-					else
-					{
-						$query .= $offset . "    " . $this->query["where"][$i];
-						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
-						$query .= " \n";
-					}
-				}
-			}
-			else
-			{
-				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
-				{
-					if( is_array($this->query["where"][$i]) )
-					{
-						$select = $this->query["where"][$i][1];
-
-						if( $select instanceof mysqlClass_Select )
-							$select = $select->build();
-
-						$this->query["where"][$i]  = str_replace("?", "(" . $select . ")", $this->query["where"][$i][0]);
-					}
-				}
-				
-				$where  = array_slice($this->query["where"], 0, -1);
-				$query .= "WHERE " . join(" ", $where) . " ";
-			}
-		}
-
-		// group by
-		if( !empty($this->query["group"]) )
-		{
-			if( $this->format )
-			{
-				$query .= $offset . "GROUP BY \n";
-
-				for( $i = 0; $i < count($this->query["group"]); $i++ )
-				{
-					$query .= $offset . "    " . $this->query["group"][$i];
-					$query .= $i < count($this->query["group"]) - 1 ? "," : NULL;
-					$query .= " \n";
-				}
-			}
-			else
-			{
-				$query .= "GROUP BY " . join(",", $this->query["group"]) . " ";
-			}
-			
-			// rollup
-			if( $this->query["rollup"] )
-				$query .= $this->format ? "WITH ROLLUP \n" : "WITH ROLLUP ";
-			
-			// having
-			if( !empty($this->query["having"]) )
-			{
-				if( $this->format )
-				{
-					$query .= $offset . "HAVING \n";
-
-					for( $i = 0; $i < count($this->query["having"]); $i = $i + 2 )
-					{
-						if( is_array($this->query["having"][$i]) )
-						{
-							$select = $this->query["having"][$i][1];
-
-							if( $select instanceof mysqlClass_Select )
-							{
-								$select = $select->build($this->formatOffset + 4);
-								$select = trim($select);
-							}
-							
-							$query .= $offset . "    " . str_replace("?", "\n" . $offset . "    (" . $select . ")", $this->query["having"][$i][0]);
-							$query .= $i < count($this->query["having"]) - 2 ? " \n" . $this->query["having"][$i + 1] . " " : NULL;
-							$query .= " \n";
-						}
-						else
-						{
-							$query .= $offset . "    " . $this->query["having"][$i];
-							$query .= $i < count($this->query["having"]) - 2 ? " \n" . $this->query["having"][$i + 1] . " " : NULL;
-							$query .= " \n";
-						}
-					}
-				}
-				else
-				{
-					for( $i = 0; $i < count($this->query["having"]); $i = $i + 2 )
-					{
-						if( is_array($this->query["having"][$i]) )
-						{
-							$select = $this->query["having"][$i][1];
-
-							if( $select instanceof mysqlClass_Select )
-								$select = $select->build();
-
-							$this->query["having"][$i]  = str_replace("?", "(" . $select . ")", $this->query["having"][$i][0]);
-							$this->query["having"][$i] .= $i < count($this->query["having"]) - 2 ? " " . $this->query["having"][$i + 1] . " " : NULL;
-						}
-					}
-					
-					$having = array_slice($this->query["having"], 0, -1);
-					$query .= "HAVING " . join(" ", $having) . " ";
-				}
-			}
-		}
-
-		// order
-		if( !empty($this->query["order"]) )
-		{
-			if( $this->format )
-			{
-				$query .= $offset . "ORDER BY \n";
-				
-				for( $i = 0; $i < count($this->query["order"]); $i++ )
-				{
-					$query .= $offset . "    " . $this->query["order"][$i];
-					$query .= $i < count($this->query["order"]) - 1 ? "," : NULL;
-					$query .= " \n";
-				}
-			}
-			else
-			{
-				$query .= "ORDER BY " . join(",", $this->query["order"]) . " ";
-			}
-		}
-
-		// limit
-		if( !empty($this->query["limit"]) )
-		{
-			if( $this->format )
-				$query .= $offset . "LIMIT \n" . $offset  . "    " . $this->query["limit"] . "\n";
-			else
-				$query .= "LIMIT " . $this->query["limit"] . " ";
-		}
-		
-		// procedure
-		if( !empty($this->query["procedure"]) )
-		{
-			if( $this->format )
-				$query .= $offset . "PROCEDURE \n" . $offset  . "    " . $this->query["procedure"] . " ";
-			else
-				$query .= "PROCEDURE " . $this->query["procedure"] . " ";
-		}
-			
-		
-		// for update
-		if( $this->query["update"] )
-			$query .= $this->format ? $offset . "FOR UPDATE \n" : "FOR UPDATE ";
-		
-		// lock in share mode
-		if( $this->query["lock"] )
-			$query .= $this->format ? $offset . "LOCK IN SHARE MODE \n" : "LOCK IN SHARE MODE ";
-		
-		// union
-		if( !is_null($this->query["union"]) )
-		{
-			$select = $this->query["union"];
-			
-			if( is_string($select) )
-				if( $this->format )
-					$query = "(" . $query. ") \nUNION \n(\n" . trim($select) . ")";
-				else
-					$query = "(" . $query. ") UNION (" . $select . ")";
-			
-			if( $select instanceof mysqlClass_Select )
-				if( $this->format )
-					$query = "(" . $query. ") \nUNION \n(\n" . trim($select->build()) . ")";
-				else
-					$query = "(" . $query. ") UNION (" . $select->build() . ")";
-		}
-		
-		return $query;
-	}
 
 
 
@@ -1148,5 +779,382 @@ class mysqlClass_Select extends mysqlClass_Abstract implements mysqlClass_Querie
 	{
 		$this->query["union"] = $select;
 		return $this;
+	}
+
+
+
+	/*
+	** build
+	*/
+
+
+
+	/**
+	 * build mysql select query string
+	 * @param integer $formatOffset
+	 * @return string
+	 */
+	public function build($formatOffset = 0)
+	{
+		$this->formatOffset += $formatOffset;
+		$offset = str_pad("", $this->formatOffset, " ");
+
+		// end if no table is set
+		if( empty($this->query["from"]) ) return NULL;
+
+		$query = $this->format ? $offset . "SELECT " : "SELECT ";
+
+		// all
+		if( $this->query["all"] ) $query .= $this->format ? "\n" . $offset . "    ALL " : "ALL ";
+
+		// distinct
+		if( $this->query["distinct"] ) $query .= $this->format ? "\n" . $offset . "    DISTINCT " : "DISTINCT ";
+
+		// distinct row
+		if( $this->query["row"] ) $query .= $this->format ? "\n" . $offset . "    DISTINCTROW " : "DISTINCTROW ";
+
+		// high priority
+		if( $this->query["high"] ) $query .= $this->format ? "\n" . $offset . "    HIGH_PRIORITY " : "HIGH_PRIORITY ";
+
+		// straight
+		if( $this->query["straight"] ) $query .= $this->format ? "\n" . $offset . "    STRAIGHT_JOIN " : "STRAIGHT_JOIN ";
+
+		$query .= $this->format ? $offset . "\n" : NULL;
+
+		// columns
+		if( !empty($this->query["columns"]) )
+		{
+			if( $this->format )
+			{
+				for( $i = 0; $i < count($this->query["columns"]); $i++ )
+				{
+					$value = $this->query["columns"][$i];
+
+					if( is_array($value) )
+					{
+						if( $value[0] instanceof mysqlClass_Select )
+						{
+							$value[0] = $value[0]->build($this->formatOffset + 4);
+							$value[0] = trim($value[0]);
+						}
+
+						$this->query["columns"][$i] = "(" . $value[0] . ") AS " . $value[1];
+					}
+					else if( $value instanceof mysqlClass_Select )
+					{
+						$this->query["columns"][$i]  = "(" . $value->build($this->formatOffset + 4) . ")";
+					}
+
+					$query .= $offset . "    " . $this->query["columns"][$i];
+					$query .= $i < count($this->query["columns"]) - 1 ? "," : NULL;
+					$query .= " \n";
+				}
+			}
+			else
+			{
+				for( $i = 0; $i < count($this->query["columns"]); $i++ )
+				{
+					if( is_array($this->query["columns"][$i]) )
+					{
+						$select = $this->query["columns"][$i][0];
+
+						if( $select instanceof mysqlClass_Select )
+							$select = $select->build();
+
+						$this->query["columns"][$i]  = "(" . $select . ") AS " . $this->query["columns"][$i][1];
+					}
+					else if( $this->query["columns"][$i] instanceof mysqlClass_Select )
+					{
+						$select = $this->query["columns"][$i];
+
+						if( $select instanceof mysqlClass_Select )
+							$select = $select->build();
+
+						$this->query["columns"][$i]  = "(" . $select . ")";
+					}
+				}
+
+				$query .= join(",", $this->query["columns"]) . " ";
+			}
+		}
+		else
+		{
+			$query .= $this->format ? $offset . "    *\n" : "* ";
+		}
+
+		// from
+		if( !empty($this->query["from"]) )
+		{
+			if( $this->format )
+			{
+				$query .= $offset . "FROM \n";
+
+				for( $i = 0; $i < count($this->query["from"]); $i++ )
+				{
+					$query .= $offset . "    " . $this->query["from"][$i];
+					$query .= $i < count($this->query["from"]) - 1 ? "," : NULL;
+					$query .= " \n";
+				}
+			}
+			else
+			{
+				$query .= "FROM " . join(",", $this->query["from"]) . " ";
+			}
+		}
+
+		// join
+		if( !empty($this->query["join"]) )
+		{
+			foreach( $this->query["join"] as $join )
+			{
+				$query .= $this->format ? $offset . $join["type"] . "\n" : $join["type"] . " ";
+
+				if( $this->format )
+				{
+					for( $i = 0; $i < count($join["tables"]); $i++ )
+					{
+						$query .= $offset . "    " . $join["tables"][$i];
+						$query .= $i < count($join["tables"]) - 1 ? "," : NULL;
+						$query .= " \n";
+					}
+
+					if( !empty($join["on"]) )
+					{
+						$query .= $offset . "ON\n";
+
+						for( $i = 0; $i < count($join["on"]); $i = $i + 2 )
+						{
+							$query .= $offset . "    " . $join["on"][$i];
+							$query .= $i < count($join["on"]) - 2 ? " \n" . $offset . $join["on"][$i + 1] . " " : NULL;
+							$query .= " \n";
+						}
+					}
+					else if( !empty($join["using"]) )
+					{
+						$query .= $offset . "USING\n";
+						$query .= $offset . "(\n";
+
+						for( $i = 0; $i < count($join["using"]); $i++ )
+						{
+							$query .= $offset . "    " . $join["using"][$i];
+							$query .= $i < count($join["using"]) - 1 ? "," : NULL;
+							$query .= " \n";
+						}
+
+						$query .= $offset . ")\n";
+					}
+				}
+				else
+				{
+					// tables
+					$query .= join(",", $join["tables"]) . " ";
+
+					// on
+					if( !empty($join["on"]) )
+					{
+						$on  = array_slice($join["on"], 0, -1);
+						$query .= "ON " . join(" ", $on) . " ";
+					}
+
+					// using
+					else
+						$query .= "USING (" . join(",", $join["using"]) . ") ";
+				}
+			}
+		}
+
+		// where
+		if( !empty($this->query["where"]) )
+		{
+			if( $this->format )
+			{
+				$query .= $offset . "WHERE \n";
+
+				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
+				{
+					if( is_array($this->query["where"][$i]) )
+					{
+						$select = $this->query["where"][$i][1];
+
+						if( $select instanceof mysqlClass_Select )
+						{
+							$select = $select->build($this->formatOffset + 4);
+							$select = trim($select);
+						}
+
+						$query .= $offset . "    " . str_replace("?", "\n" . $offset . "    (" . $select . ")", $this->query["where"][$i][0]);
+						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
+						$query .= " \n";
+					}
+					else
+					{
+						$query .= $offset . "    " . $this->query["where"][$i];
+						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
+						$query .= " \n";
+					}
+				}
+			}
+			else
+			{
+				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
+				{
+					if( is_array($this->query["where"][$i]) )
+					{
+						$select = $this->query["where"][$i][1];
+
+						if( $select instanceof mysqlClass_Select )
+							$select = $select->build();
+
+						$this->query["where"][$i]  = str_replace("?", "(" . $select . ")", $this->query["where"][$i][0]);
+					}
+				}
+
+				$where  = array_slice($this->query["where"], 0, -1);
+				$query .= "WHERE " . join(" ", $where) . " ";
+			}
+		}
+
+		// group by
+		if( !empty($this->query["group"]) )
+		{
+			if( $this->format )
+			{
+				$query .= $offset . "GROUP BY \n";
+
+				for( $i = 0; $i < count($this->query["group"]); $i++ )
+				{
+					$query .= $offset . "    " . $this->query["group"][$i];
+					$query .= $i < count($this->query["group"]) - 1 ? "," : NULL;
+					$query .= " \n";
+				}
+			}
+			else
+			{
+				$query .= "GROUP BY " . join(",", $this->query["group"]) . " ";
+			}
+
+			// rollup
+			if( $this->query["rollup"] )
+				$query .= $this->format ? "WITH ROLLUP \n" : "WITH ROLLUP ";
+
+			// having
+			if( !empty($this->query["having"]) )
+			{
+				if( $this->format )
+				{
+					$query .= $offset . "HAVING \n";
+
+					for( $i = 0; $i < count($this->query["having"]); $i = $i + 2 )
+					{
+						if( is_array($this->query["having"][$i]) )
+						{
+							$select = $this->query["having"][$i][1];
+
+							if( $select instanceof mysqlClass_Select )
+							{
+								$select = $select->build($this->formatOffset + 4);
+								$select = trim($select);
+							}
+
+							$query .= $offset . "    " . str_replace("?", "\n" . $offset . "    (" . $select . ")", $this->query["having"][$i][0]);
+							$query .= $i < count($this->query["having"]) - 2 ? " \n" . $this->query["having"][$i + 1] . " " : NULL;
+							$query .= " \n";
+						}
+						else
+						{
+							$query .= $offset . "    " . $this->query["having"][$i];
+							$query .= $i < count($this->query["having"]) - 2 ? " \n" . $this->query["having"][$i + 1] . " " : NULL;
+							$query .= " \n";
+						}
+					}
+				}
+				else
+				{
+					for( $i = 0; $i < count($this->query["having"]); $i = $i + 2 )
+					{
+						if( is_array($this->query["having"][$i]) )
+						{
+							$select = $this->query["having"][$i][1];
+
+							if( $select instanceof mysqlClass_Select )
+								$select = $select->build();
+
+							$this->query["having"][$i]  = str_replace("?", "(" . $select . ")", $this->query["having"][$i][0]);
+							$this->query["having"][$i] .= $i < count($this->query["having"]) - 2 ? " " . $this->query["having"][$i + 1] . " " : NULL;
+						}
+					}
+
+					$having = array_slice($this->query["having"], 0, -1);
+					$query .= "HAVING " . join(" ", $having) . " ";
+				}
+			}
+		}
+
+		// order
+		if( !empty($this->query["order"]) )
+		{
+			if( $this->format )
+			{
+				$query .= $offset . "ORDER BY \n";
+
+				for( $i = 0; $i < count($this->query["order"]); $i++ )
+				{
+					$query .= $offset . "    " . $this->query["order"][$i];
+					$query .= $i < count($this->query["order"]) - 1 ? "," : NULL;
+					$query .= " \n";
+				}
+			}
+			else
+			{
+				$query .= "ORDER BY " . join(",", $this->query["order"]) . " ";
+			}
+		}
+
+		// limit
+		if( !empty($this->query["limit"]) )
+		{
+			if( $this->format )
+				$query .= $offset . "LIMIT \n" . $offset  . "    " . $this->query["limit"] . "\n";
+			else
+				$query .= "LIMIT " . $this->query["limit"] . " ";
+		}
+
+		// procedure
+		if( !empty($this->query["procedure"]) )
+		{
+			if( $this->format )
+				$query .= $offset . "PROCEDURE \n" . $offset  . "    " . $this->query["procedure"] . " ";
+			else
+				$query .= "PROCEDURE " . $this->query["procedure"] . " ";
+		}
+
+
+		// for update
+		if( $this->query["update"] )
+			$query .= $this->format ? $offset . "FOR UPDATE \n" : "FOR UPDATE ";
+
+		// lock in share mode
+		if( $this->query["lock"] )
+			$query .= $this->format ? $offset . "LOCK IN SHARE MODE \n" : "LOCK IN SHARE MODE ";
+
+		// union
+		if( !is_null($this->query["union"]) )
+		{
+			$select = $this->query["union"];
+
+			if( is_string($select) )
+				if( $this->format )
+					$query = "(" . $query. ") \nUNION \n(\n" . trim($select) . ")";
+				else
+					$query = "(" . $query. ") UNION (" . $select . ")";
+
+			if( $select instanceof mysqlClass_Select )
+				if( $this->format )
+					$query = "(" . $query. ") \nUNION \n(\n" . trim($select->build()) . ")";
+				else
+					$query = "(" . $query. ") UNION (" . $select->build() . ")";
+		}
+
+		return $query;
 	}
 }

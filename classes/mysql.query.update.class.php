@@ -50,140 +50,6 @@ class mysqlClass_Update extends mysqlClass_Abstract implements mysqlClass_Querie
 		return $this;
 	}
 
-	/**
-	 * build mysql update query string
-	 * @param integer $formatOffset
-	 * @return string
-	 */
-	public function build($formatOffset = 0)
-	{
-		$this->formatOffset += $formatOffset;
-		$offset = str_pad("", $this->formatOffset, " ");
-
-		// end if no table is set
-		if( empty($this->query["tables"]) ) return NULL;
-
-		$query = $this->format ? $offset . "UPDATE " : "UPDATE ";
-
-		// low priority
-		if( $this->query["low"] ) $query .= "LOW_PRIORITY ";
-
-		// ignore
-		if( $this->query["ignore"] ) $query .= "IGNORE ";
-
-		$query .= $this->format ? $offset . "\n" : NULL;
-
-		// tables
-		if( count($this->query["tables"]) == 1 )
-			$query .= $this->format ? $offset . "    " . $this->query["tables"][0] . "\n" : $this->query["tables"][0] . " ";
-		else if( $this->format )
-			for( $i = 0; $i < count($this->query["tables"]); $i++ )
-			{
-				$query .= $offset . "    " . $this->query["tables"][$i] . "";
-				$query .= $i < count($this->query["tables"]) - 1 ? "," : NULL;
-				$query .= "\n";
-			}
-		else
-			$query .= join(",", $this->query["tables"]) . " ";
-
-		// set
-		if( !empty($this->query["set"]) )
-		{
-			$query .= $this->format ? "SET\n" : "SET ";
-
-			if( $this->format )
-				for( $i = 0; $i < count($this->query["set"]); $i++ )
-				{
-					$query .= $offset . "    " . $this->query["set"][$i] . "";
-					$query .= $i < count($this->query["set"]) - 1 ? ", \n" : NULL;
-				}
-			else
-				$query .= join(",", $this->query["set"]);
-
-			$query .= $this->format ? "\n" : " ";
-		}
-
-		// where
-		if( !empty($this->query["where"]) )
-		{
-			if( $this->format )
-			{
-				$query .= $offset . "WHERE \n";
-
-				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
-				{
-					if( is_array($this->query["where"][$i]) )
-					{
-						$select = $this->query["where"][$i][1];
-
-						if( $select instanceof mysqlClass_Select )
-						{
-							$select = $select->build($this->formatOffset + 4);
-							$select = trim($select);
-						}
-
-						$query .= $offset . "    " . str_replace("?", "\n" . $offset . "    (" . $select . ")", $this->query["where"][$i][0]);
-						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
-						$query .= " \n";
-					}
-					else
-					{
-						$query .= $offset . "    " . $this->query["where"][$i];
-						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
-						$query .= " \n";
-					}
-				}
-			}
-			else
-			{
-				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
-				{
-					if( is_array($this->query["where"][$i]) )
-					{
-						$select = $this->query["where"][$i][1];
-
-						if( $select instanceof mysqlClass_Select )
-							$select = $select->build();
-
-						$this->query["where"][$i]  = str_replace("?", "(" . $select . ")", $this->query["where"][$i][0]);
-					}
-				}
-
-				$where  = array_slice($this->query["where"], 0, -1);
-				$query .= "WHERE " . join(" ", $where) . " ";
-			}
-		}
-
-		// add order
-		if( !empty($this->query["order"]) && count($this->query["tables"]) == 1 )
-		{
-			if( $this->format )
-			{
-				$query .= $offset . "ORDER BY \n";
-
-				for( $i = 0; $i < count($this->query["order"]); $i++ )
-				{
-					$query .= $offset . "    " . $this->query["order"][$i];
-					$query .= $i < count($this->query["order"]) - 1 ? "," : NULL;
-					$query .= " \n";
-				}
-			}
-			else
-			{
-				$query .= "ORDER BY " . join(",", $this->query["order"]) . " ";
-			}
-		}
-
-		// add limit
-		if( !empty($this->query["limit"]) && count($this->query["tables"]) == 1 )
-		{
-			$query .= $this->format ? $offset . "LIMIT \n" . $offset  . "    " : "LIMIT ";
-			$query .= $this->query["limit"];
-		}
-		
-		return $query;
-	}
-
 
 
 	/*
@@ -388,5 +254,147 @@ class mysqlClass_Update extends mysqlClass_Abstract implements mysqlClass_Querie
 		$this->query["limit"] = $limit;
 
 		return $this;
+	}
+
+
+
+	/*
+	** build
+	*/
+
+
+
+	/**
+	 * build mysql update query string
+	 * @param integer $formatOffset
+	 * @return string
+	 */
+	public function build($formatOffset = 0)
+	{
+		$this->formatOffset += $formatOffset;
+		$offset = str_pad("", $this->formatOffset, " ");
+
+		// end if no table is set
+		if( empty($this->query["tables"]) ) return NULL;
+
+		$query = $this->format ? $offset . "UPDATE " : "UPDATE ";
+
+		// low priority
+		if( $this->query["low"] ) $query .= "LOW_PRIORITY ";
+
+		// ignore
+		if( $this->query["ignore"] ) $query .= "IGNORE ";
+
+		$query .= $this->format ? $offset . "\n" : NULL;
+
+		// tables
+		if( count($this->query["tables"]) == 1 )
+			$query .= $this->format ? $offset . "    " . $this->query["tables"][0] . "\n" : $this->query["tables"][0] . " ";
+		else if( $this->format )
+			for( $i = 0; $i < count($this->query["tables"]); $i++ )
+			{
+				$query .= $offset . "    " . $this->query["tables"][$i] . "";
+				$query .= $i < count($this->query["tables"]) - 1 ? "," : NULL;
+				$query .= "\n";
+			}
+		else
+			$query .= join(",", $this->query["tables"]) . " ";
+
+		// set
+		if( !empty($this->query["set"]) )
+		{
+			$query .= $this->format ? "SET\n" : "SET ";
+
+			if( $this->format )
+				for( $i = 0; $i < count($this->query["set"]); $i++ )
+				{
+					$query .= $offset . "    " . $this->query["set"][$i] . "";
+					$query .= $i < count($this->query["set"]) - 1 ? ", \n" : NULL;
+				}
+			else
+				$query .= join(",", $this->query["set"]);
+
+			$query .= $this->format ? "\n" : " ";
+		}
+
+		// where
+		if( !empty($this->query["where"]) )
+		{
+			if( $this->format )
+			{
+				$query .= $offset . "WHERE \n";
+
+				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
+				{
+					if( is_array($this->query["where"][$i]) )
+					{
+						$select = $this->query["where"][$i][1];
+
+						if( $select instanceof mysqlClass_Select )
+						{
+							$select = $select->build($this->formatOffset + 4);
+							$select = trim($select);
+						}
+
+						$query .= $offset . "    " . str_replace("?", "\n" . $offset . "    (" . $select . ")", $this->query["where"][$i][0]);
+						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
+						$query .= " \n";
+					}
+					else
+					{
+						$query .= $offset . "    " . $this->query["where"][$i];
+						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
+						$query .= " \n";
+					}
+				}
+			}
+			else
+			{
+				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
+				{
+					if( is_array($this->query["where"][$i]) )
+					{
+						$select = $this->query["where"][$i][1];
+
+						if( $select instanceof mysqlClass_Select )
+							$select = $select->build();
+
+						$this->query["where"][$i]  = str_replace("?", "(" . $select . ")", $this->query["where"][$i][0]);
+					}
+				}
+
+				$where  = array_slice($this->query["where"], 0, -1);
+				$query .= "WHERE " . join(" ", $where) . " ";
+			}
+		}
+
+		// add order
+		if( !empty($this->query["order"]) && count($this->query["tables"]) == 1 )
+		{
+			if( $this->format )
+			{
+				$query .= $offset . "ORDER BY \n";
+
+				for( $i = 0; $i < count($this->query["order"]); $i++ )
+				{
+					$query .= $offset . "    " . $this->query["order"][$i];
+					$query .= $i < count($this->query["order"]) - 1 ? "," : NULL;
+					$query .= " \n";
+				}
+			}
+			else
+			{
+				$query .= "ORDER BY " . join(",", $this->query["order"]) . " ";
+			}
+		}
+
+		// add limit
+		if( !empty($this->query["limit"]) && count($this->query["tables"]) == 1 )
+		{
+			$query .= $this->format ? $offset . "LIMIT \n" . $offset  . "    " : "LIMIT ";
+			$query .= $this->query["limit"];
+		}
+
+		return $query;
 	}
 }

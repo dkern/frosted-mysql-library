@@ -51,148 +51,6 @@ class mysqlClass_Delete extends mysqlClass_Abstract implements mysqlClass_Querie
 		return $this;
 	}
 
-	/**
-	 * build mysql delete query string
-	 * @param integer $formatOffset
-	 * @return string
-	 */
-	public function build($formatOffset = 0)
-	{
-		$this->formatOffset += $formatOffset;
-		$offset = str_pad("", $this->formatOffset, " ");
-
-		// end if no table is set
-		if( empty($this->query["tables"]) ) return NULL;
-
-		$query = $this->format ? $offset . "DELETE " : "DELETE ";
-
-		// low priority
-		if( $this->query["low"] ) $query .= $this->format ? "\n" . $offset . "    LOW_PRIORITY " : "LOW_PRIORITY ";
-
-		// quick
-		if( $this->query["quick"] ) $query .= $this->format ? "\n" . $offset . "    QUICK " : "QUICK ";
-
-		// ignore
-		if( $this->query["ignore"] ) $query .= $this->format ? "\n" . $offset . "    IGNORE " : "IGNORE ";
-
-		// format line break
-		$query .= $this->format && ($this->query["low"] || $this->query["quick"] || $this->query["ignore"]) ? "\n" : NULL;
-
-		// tables
-		if( count($this->query["tables"]) == 1 )
-		{
-			$query .= $this->format ? $offset . "FROM\n" . $offset . "    " . $this->query["tables"][0] . "\n" : "FROM " . $this->query["tables"][0] . " ";
-		}
-		else
-		{
-			if( $this->format )
-			{
-				$query .= "FROM\n";
-
-				for( $i = 0; $i < count($this->query["tables"]); $i++ )
-				{
-					$query .= $offset . "    " . $this->query["tables"][$i];
-					$query .= $i < count($this->query["tables"]) - 1 ? "," : NULL;
-					$query .= "\n";
-				}
-
-				$query .= $offset . "USING\n";
-
-				for( $i = 0; $i < count($this->query["using"]); $i++ )
-				{
-					$query .= $offset . "    " . $this->query["using"][$i];
-					$query .= $i < count($this->query["using"]) - 1 ? "," : NULL;
-					$query .= "\n";
-				}
-			}
-			else
-			{
-				$query .= "FROM " . join(",", $this->query["tables"]) . " ";
-				$query .= "USING " . join(",", $this->query["using"]) . " ";
-			}
-		}
-
-		// where
-		if( !empty($this->query["where"]) )
-		{
-			if( $this->format )
-			{
-				$query .= $offset . "WHERE \n";
-
-				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
-				{
-					if( is_array($this->query["where"][$i]) )
-					{
-						$select = $this->query["where"][$i][1];
-						
-						if( $select instanceof mysqlClass_Select )
-						{
-							$select = $select->build($this->formatOffset + 4);
-							$select = trim($select);
-						}
-						
-						$query .= $offset . "    " . str_replace("?", "\n" . $offset . "    (" . $select . ")", $this->query["where"][$i][0]);
-						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
-						$query .= " \n";
-					}
-					else
-					{
-						$query .= $offset . "    " . $this->query["where"][$i];
-						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
-						$query .= " \n";
-					}
-				}
-			}
-			else
-			{
-				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
-				{
-					if( is_array($this->query["where"][$i]) )
-					{
-						$select = $this->query["where"][$i][1];
-
-						if( $select instanceof mysqlClass_Select )
-							$select = $select->build();
-
-						$this->query["where"][$i]  = str_replace("?", "(" . $select . ")", $this->query["where"][$i][0]);
-					}
-				}
-
-				$where  = array_slice($this->query["where"], 0, -1);
-				$query .= "WHERE " . join(" ", $where) . " ";
-			}
-		}
-
-		// order
-		if( !empty($this->query["order"]) )
-		{
-			if( $this->format )
-			{
-				$query .= $offset . "ORDER BY \n";
-
-				for( $i = 0; $i < count($this->query["order"]); $i++ )
-				{
-					$query .= $offset . "    " . $this->query["order"][$i];
-					$query .= $i < count($this->query["order"]) - 1 ? "," : NULL;
-					$query .= " \n";
-				}
-			}
-			else
-			{
-				$query .= "ORDER BY " . join(",", $this->query["order"]) . " ";
-			}
-		}
-
-		// limit
-		if( !empty($this->query["limit"]) )
-		{
-			$query .= $this->format ? $offset . "LIMIT \n" . $offset  . "    " : "LIMIT ";
-			$query .= $this->query["limit"];
-		}
-
-		return $query;
-	}
-
 
 
 	/*
@@ -413,5 +271,155 @@ class mysqlClass_Delete extends mysqlClass_Abstract implements mysqlClass_Querie
 		$this->query["limit"] = $limit;
 
 		return $this;
+	}
+
+
+
+	/*
+	** build
+	*/
+
+
+
+	/**
+	 * build mysql delete query string
+	 * @param integer $formatOffset
+	 * @return string
+	 */
+	public function build($formatOffset = 0)
+	{
+		$this->formatOffset += $formatOffset;
+		$offset = str_pad("", $this->formatOffset, " ");
+
+		// end if no table is set
+		if( empty($this->query["tables"]) ) return NULL;
+
+		$query = $this->format ? $offset . "DELETE " : "DELETE ";
+
+		// low priority
+		if( $this->query["low"] ) $query .= $this->format ? "\n" . $offset . "    LOW_PRIORITY " : "LOW_PRIORITY ";
+
+		// quick
+		if( $this->query["quick"] ) $query .= $this->format ? "\n" . $offset . "    QUICK " : "QUICK ";
+
+		// ignore
+		if( $this->query["ignore"] ) $query .= $this->format ? "\n" . $offset . "    IGNORE " : "IGNORE ";
+
+		// format line break
+		$query .= $this->format && ($this->query["low"] || $this->query["quick"] || $this->query["ignore"]) ? "\n" : NULL;
+
+		// tables
+		if( count($this->query["tables"]) == 1 )
+		{
+			$query .= $this->format ? $offset . "FROM\n" . $offset . "    " . $this->query["tables"][0] . "\n" : "FROM " . $this->query["tables"][0] . " ";
+		}
+		else
+		{
+			if( $this->format )
+			{
+				$query .= "FROM\n";
+
+				for( $i = 0; $i < count($this->query["tables"]); $i++ )
+				{
+					$query .= $offset . "    " . $this->query["tables"][$i];
+					$query .= $i < count($this->query["tables"]) - 1 ? "," : NULL;
+					$query .= "\n";
+				}
+
+				$query .= $offset . "USING\n";
+
+				for( $i = 0; $i < count($this->query["using"]); $i++ )
+				{
+					$query .= $offset . "    " . $this->query["using"][$i];
+					$query .= $i < count($this->query["using"]) - 1 ? "," : NULL;
+					$query .= "\n";
+				}
+			}
+			else
+			{
+				$query .= "FROM " . join(",", $this->query["tables"]) . " ";
+				$query .= "USING " . join(",", $this->query["using"]) . " ";
+			}
+		}
+
+		// where
+		if( !empty($this->query["where"]) )
+		{
+			if( $this->format )
+			{
+				$query .= $offset . "WHERE \n";
+
+				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
+				{
+					if( is_array($this->query["where"][$i]) )
+					{
+						$select = $this->query["where"][$i][1];
+
+						if( $select instanceof mysqlClass_Select )
+						{
+							$select = $select->build($this->formatOffset + 4);
+							$select = trim($select);
+						}
+
+						$query .= $offset . "    " . str_replace("?", "\n" . $offset . "    (" . $select . ")", $this->query["where"][$i][0]);
+						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
+						$query .= " \n";
+					}
+					else
+					{
+						$query .= $offset . "    " . $this->query["where"][$i];
+						$query .= $i < count($this->query["where"]) - 2 ? " \n" . $offset . $this->query["where"][$i + 1] . " " : NULL;
+						$query .= " \n";
+					}
+				}
+			}
+			else
+			{
+				for( $i = 0; $i < count($this->query["where"]); $i = $i + 2 )
+				{
+					if( is_array($this->query["where"][$i]) )
+					{
+						$select = $this->query["where"][$i][1];
+
+						if( $select instanceof mysqlClass_Select )
+							$select = $select->build();
+
+						$this->query["where"][$i]  = str_replace("?", "(" . $select . ")", $this->query["where"][$i][0]);
+					}
+				}
+
+				$where  = array_slice($this->query["where"], 0, -1);
+				$query .= "WHERE " . join(" ", $where) . " ";
+			}
+		}
+
+		// order
+		if( !empty($this->query["order"]) )
+		{
+			if( $this->format )
+			{
+				$query .= $offset . "ORDER BY \n";
+
+				for( $i = 0; $i < count($this->query["order"]); $i++ )
+				{
+					$query .= $offset . "    " . $this->query["order"][$i];
+					$query .= $i < count($this->query["order"]) - 1 ? "," : NULL;
+					$query .= " \n";
+				}
+			}
+			else
+			{
+				$query .= "ORDER BY " . join(",", $this->query["order"]) . " ";
+			}
+		}
+
+		// limit
+		if( !empty($this->query["limit"]) )
+		{
+			$query .= $this->format ? $offset . "LIMIT \n" . $offset  . "    " : "LIMIT ";
+			$query .= $this->query["limit"];
+		}
+
+		return $query;
 	}
 }

@@ -28,27 +28,6 @@ class mysqlClass_Truncate extends mysqlClass_Abstract implements mysqlClass_Quer
 		return $this;
 	}
 
-	/**
-	 * build mysql update query string
-	 * @param integer $formatOffset
-	 * @return string
-	 */
-	public function build($formatOffset = 0)
-	{
-		// end if no table is set
-		if( empty($this->query["table"]) ) return NULL;
-
-		if( $this->format )
-		{
-			$this->formatOffset += $formatOffset;
-			$offset = str_pad("", $this->formatOffset, " ");
-
-			return "TRUNCATE TABLE\n" . $offset . "    " . $this->query["table"];
-		}
-
-		return "TRUNCATE TABLE " . $this->query["table"];
-	}
-
 
 
 	/*
@@ -76,5 +55,34 @@ class mysqlClass_Truncate extends mysqlClass_Abstract implements mysqlClass_Quer
 			}
 		
 		return $this;
+	}
+
+
+
+	/*
+	** build
+	*/
+
+
+
+	/**
+	 * build mysql update query string
+	 * @param integer $formatOffset
+	 * @return string
+	 */
+	public function build($formatOffset = 0)
+	{
+		// end if no table is set
+		if( empty($this->query["table"]) ) return NULL;
+
+		if( $this->format )
+		{
+			$this->formatOffset += $formatOffset;
+			$offset = str_pad("", $this->formatOffset, " ");
+
+			return "TRUNCATE TABLE\n" . $offset . "    " . $this->query["table"];
+		}
+
+		return "TRUNCATE TABLE " . $this->query["table"];
 	}
 }
