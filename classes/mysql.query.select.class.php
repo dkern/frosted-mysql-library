@@ -419,7 +419,7 @@ class mysqlClass_Select extends mysqlClass_Abstract implements mysqlClass_Querie
 	 * add 'on' to last join in query
 	 * @param string $on
 	 * @param string $replace
-	 * @param boolean $nextRelation
+	 * @param string $nextRelation
 	 * @return mysqlClass_Select
 	 */
 	public function on($on, $replace = NULL, $nextRelation = mysqlClass::JOIN_AND)
