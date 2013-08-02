@@ -2096,6 +2096,19 @@ class mysqlClass_Delete extends mysqlClass_Abstract implements mysqlClass_Querie
 	}
 
 	/**
+	 * alias of 'table'
+	 * @param string|array $table
+	 * @return mysqlClass_Delete
+	 */
+	public function from($table)
+	{
+		// pervent php debug notification
+		if( $table );
+		
+		return call_user_func_array(array($this, "table"), func_get_args());
+	}
+
+	/**
 	 * add using tables to query
 	 * @param string|array $table
 	 * @return mysqlClass_Delete

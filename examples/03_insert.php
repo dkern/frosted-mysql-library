@@ -37,3 +37,23 @@ $sql->insert("table_name")
 	->select($sql->select("name", "email", "timestamp")->from("sub_table"))
 	->showQuery()
 	/*->run()*/;
+
+// use on duplicate
+$sql->insert("table_name")
+	->columns("name", "email", "timestamp")
+	->values("eisbehr", "test@test.com", time())
+	->onDuplicate("email = VALUES(email)")
+	->showQuery()
+	/*->run()*/;
+
+// add big amounts of data to a single query
+$query = $sql->insert("table_name")
+			 ->columns("id", "name", "email", "timestamp");
+
+for( $i = 0; $i < 10; $i++ )
+{
+	$query->values($i, "eisbehr", "test@test.com", time());
+}
+
+
+$query->showQuery()/*->run()*/;

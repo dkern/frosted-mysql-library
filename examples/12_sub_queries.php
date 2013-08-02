@@ -14,7 +14,7 @@ $sql = new mysqlClass();
 
 
 // of course is it possible to add sub-queries by string to every function.
-// but function as columns (select), where, orWhere, having, orHaving or select (insert)
+// but function as columns (select), where, orWhere, having, orHaving, select (insert) or union
 // can even handle class instances
 
 // to create a second instance just add an boolean 'true' to the parameter list
